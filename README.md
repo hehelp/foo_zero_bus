@@ -4,13 +4,20 @@
 
 Zero Bus is an in-process asynchronous message bus designed specifically for foobar2000. It provides a unified Request / Response / Event communication model for native C++ components and WebSocket clients. The core design philosophy of the bus is to solely route the "Envelope," absolutely refusing to parse the Payload at the business level.
 
-The current version is production-ready `0.1.0`. It fully supports foobar2000 1.x / 2.x in Windows environments (covering both 32-bit and 64-bit versions), as well as macOS 11+ systems.
+The current version is production-ready `0.1.1`. It fully supports foobar2000 1.x / 2.x in Windows environments (covering 32-bit, 64-bit, and ARM64EC), as well as macOS 11+ systems.
 
 This repository is primarily used for hosting compiled installation packages, provided ABI header files, and relevant sample code. You can obtain the installation packages directly from the repository's **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page.
 
 ---
 
 ## 🚀 Changelog
+
+### v0.1.1 (2026-09-15)
+
+- Preferences page is now bilingual. Simplified Chinese locales default to Chinese; all others default to English. The language can also be switched manually.
+- The installer now includes a Windows ARM (ARM64EC) binary at `arm64ec/foo_zero_bus.dll`. foobar2000 for ARM prefers this over the x64 build.
+- The macOS component is an explicit Universal Binary (arm64 + x86_64).
+- Fixed the preferences “Language” label position and width.
 
 ### v0.1.0 (2026-09-15)
 
@@ -29,22 +36,23 @@ This repository is primarily used for hosting compiled installation packages, pr
 | Category | Detailed Requirements |
 | --- | --- |
 | **Operating System** | Windows 10 / 11; macOS 11+ |
-| **Player Version** | **Windows**: foobar2000 1.x and 2.x (Supports 32-bit and 64-bit) **Mac**: foobar2000 2.6 and above |
-| **Limitations** | Does not support mixing DLLs of different bitness on Windows or mixing bundles on Mac; WebSocket only listens on the local loopback address |
+| **Player Version** | **Windows**: foobar2000 1.x and 2.x (32-bit, 64-bit, and ARM64EC) **Mac**: foobar2000 2.6 and above |
+| **Limitations** | Does not support mixing DLLs of different architectures on Windows or mixing bundles on Mac; WebSocket only listens on the local loopback address |
 
-**⚠️ Note**: The 32-bit and 64-bit versions for Windows correspond to different DLL files; mixing them is strictly prohibited.
+**⚠️ Note**: The 32-bit, 64-bit, and ARM64EC builds for Windows are different DLL files; mixing them is strictly prohibited.
 
 | Player Version | Component Filename | Default Installation Directory |
 | --- | --- | --- |
 | foobar2000 **32-bit** | `foo_zero_bus.dll` | `%APPDATA%\foobar2000-v2\user-components\foo_zero_bus\` |
 | foobar2000 **64-bit** | `foo_zero_bus.dll` | `%APPDATA%\foobar2000-v2\user-components-x64\foo_zero_bus\` |
+| foobar2000 **Windows ARM** | `foo_zero_bus.dll` | `%APPDATA%\foobar2000-v2\user-components-arm64\foo_zero_bus\` |
 | foobar2000 **Mac** | `foo_zero_bus.component` | `~/Library/foobar2000-v2/user-components/` |
 
 ---
 
 ## 📦 Installation Guide
 
-1. Head to the **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page of this repository and download the latest `foo_zero_bus-0.1.0.fb2k-component` installation package.
+1. Head to the **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page of this repository and download the latest `foo_zero_bus-0.1.1.fb2k-component` installation package.
 2. Open foobar2000, navigate to **File → Preferences → Components → Install**, and select the `.fb2k-component` file you just downloaded. (Note: foobar 2.x will automatically select the correct version based on the software's bitness).
 3. Alternatively, you can manually copy the corresponding DLL file into the installation directory listed in the table above, then **restart** foobar2000.
 
@@ -79,7 +87,7 @@ For complete integration instructions, please refer to the [English SDK](docs/sd
 
 Panel Path: **File → Preferences → Tools → Zero Bus**
 
-- **General Settings**: Supports customizing the WebSocket port (for security reasons, listens only on `127.0.0.1`).
+- **General Settings**: Supports customizing the WebSocket port (for security reasons, listens only on `127.0.0.1`), and the UI language (Follow system / 中文 / English).
 - **Service Control**: Supports manually starting or stopping the bus service.
 - **Status Monitoring**: View the number of active connections in real-time.
 - **Log Subpage**: Provides optional communication logging, a read-only console output view, and a one-click log clearing feature.
