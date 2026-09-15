@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Zero Bus WebSocket 示例</title>
+  <style>
+    body { font: 14px/1.4 sans-serif; max-width: 720px; margin: 24px; }
+    label, input, button, textarea { display: block; margin: 8px 0; width: 100%; }
+    textarea { height: 220px; font-family: Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h1>Zero Bus WebSocket</h1>
+  <label>地址 <input id="url" value="ws://127.0.0.1:17890"></label>
+  <label>服务名 <input id="service" value="plugin.localize"></label>
+  <label>Payload（业务 JSON，发送前会再 stringify）
+    <input id="payload" value='{"text":"Hello","to":"zh-CN"}'>
+  </label>
+  <button id="connect">连接</button>
+  <button id="request">发送 REQUEST</button>
+  <button id="event">发送 EVENT</button>
+  <textarea id="log" readonly></textarea>
+  <script>
+    const logEl = document.getElementById("log");
+    const log = (line) => { logEl.value += line + "\n"; logEl.scrollTop = logEl.scrollHeight; };
+    let socket = null;
+    let seq = 0;
+
+    document.getElementById("connect").onclick = () => {
+      if (socket) socket.close();
+      socket = new WebSocket(document.getElementById("url").value);
+      socket.onopen = () => log("connected");
+      socket.onclose = () => log("closed");
+      socket.onerror = () => log("error");
+      socket.onmessage = (ev) => log("<< " + ev.data);
+    };
+
+    const send = (type) => {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        log("not connected");
+        return;
+      }
+      const id = "req_" + (++seq);
+      const envelope = {
+        sender: "",
+        receiver: document.getElementById("service").value,
+        type,
+        msg_id: id,
+        correlation_id: "",
+        payload: document.getElementById("payload").value
+      };
+      const text = JSON.stringify(envelope);
+      socket.send(text);
+      log(">> " + text);
+    };
+
+    document.getElementById("request").onclick = () => send(1);
+    document.getElementById("event").onclick = () => send(3);
+  </script>
+</body>
+</html>
