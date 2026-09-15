@@ -2,37 +2,37 @@
 
 # Zero Bus (foo_zero_bus)
 
-Zero Bus is an in-process asynchronous message bus designed specifically for foobar2000. It provides a unified Request / Response / Event communication model for native C++ components and WebSocket clients. The bus routes the envelope only and never parses the business payload.
+Zero Bus is an in-process asynchronous message bus designed specifically for foobar2000. It provides a unified Request / Response / Event communication model for native C++ components and WebSocket clients. The core design philosophy of the bus is to solely route the "Envelope," absolutely refusing to parse the Payload at the business level.
 
-The current version is production-ready `0.1.0`. It supports foobar2000 1.x / 2.x on Windows (32-bit and 64-bit) and macOS 11+.
+The current version is production-ready `0.1.0`. It fully supports foobar2000 1.x / 2.x in Windows environments (covering both 32-bit and 64-bit versions), as well as macOS 11+ systems.
 
-This repository hosts compiled installers, public ABI headers, and sample code. Download the installer from **[Releases](https://github.com/hehelp/foo_zero_bus/releases)**.
+This repository is primarily used for hosting compiled installation packages, provided ABI header files, and relevant sample code. You can obtain the installation packages directly from the repository's **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page.
 
 ---
 
-## Changelog
+## 🚀 Changelog
 
 ### v0.1.0 (2026-09-15)
 
-- In-process C++20 bus with REQUEST, RESPONSE, EVENT, and NOTIFICATION, plus timeout and cooperative cancellation.
-- Other foobar components integrate through the `zero_message_bus_v1` ABI. Copy `sdk/foo_zero_bus/abi/` only; do not statically link the bus core.
-- Local WebSocket listens on `127.0.0.1:17890` by default (loopback only; authentication is off by default).
-- Preferences page: **Tools → Zero Bus**. Change the port, start or stop the service, view live connections, and optionally inspect the communication log.
-- Payload must be a string. Serialize business JSON before placing it in the payload.
+- In-process bus built on C++20, fully supporting REQUEST, RESPONSE, EVENT, and NOTIFICATION, with built-in timeout control and cooperative cancellation mechanisms.
+- Other foobar components must integrate via the `zero_message_bus_v1` ABI (only need to copy the `sdk/foo_zero_bus/abi/` directory; statically linking the bus core library is strictly prohibited).
+- Native WebSocket listens by default at `127.0.0.1:17890` (restricted to local loopback address, authentication disabled by default).
+- Added preference panel: **Tools → Zero Bus**, allowing port modification, starting/stopping the service, viewing current connections, and providing an optional communication log viewing feature.
+- Strict specification: Payload must be in pure string format (business JSON data must be executed with `stringify` beforehand).
 - In-process C++ SDK request helpers: `request_async()`, `request_future()`, `request_sync()`, and C++20 `request_awaitable()`. These are for source-tree tools and tests only.
 - Restarting the bus restores previously registered ABI services. Register, connect, and disconnect events are always written to the log.
 
 ---
 
-## Requirements
+## 💻 Operating Environment & Support
 
-| Category | Details |
+| Category | Detailed Requirements |
 | --- | --- |
 | **Operating System** | Windows 10 / 11; macOS 11+ |
-| **Player Version** | **Windows**: foobar2000 1.x and 2.x (32-bit and 64-bit). **Mac**: foobar2000 2.6 and later |
-| **Limitations** | Do not mix Windows DLLs of different bitness or mix Mac bundles. WebSocket listens on loopback only |
+| **Player Version** | **Windows**: foobar2000 1.x and 2.x (Supports 32-bit and 64-bit) **Mac**: foobar2000 2.6 and above |
+| **Limitations** | Does not support mixing DLLs of different bitness on Windows or mixing bundles on Mac; WebSocket only listens on the local loopback address |
 
-The 32-bit and 64-bit Windows builds are different DLLs. Do not mix them.
+**⚠️ Note**: The 32-bit and 64-bit versions for Windows correspond to different DLL files; mixing them is strictly prohibited.
 
 | Player Version | Component Filename | Default Installation Directory |
 | --- | --- | --- |
@@ -42,44 +42,44 @@ The 32-bit and 64-bit Windows builds are different DLLs. Do not mix them.
 
 ---
 
-## Install
+## 📦 Installation Guide
 
-1. Open [Releases](https://github.com/hehelp/foo_zero_bus/releases) and download `foo_zero_bus-0.1.0.fb2k-component`.
-2. In foobar2000: **File → Preferences → Components → Install**, then select the `.fb2k-component` file. foobar2000 2.x picks the matching bitness automatically.
-3. Or copy the matching DLL into the directory above and **restart** foobar2000.
+1. Head to the **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page of this repository and download the latest `foo_zero_bus-0.1.0.fb2k-component` installation package.
+2. Open foobar2000, navigate to **File → Preferences → Components → Install**, and select the `.fb2k-component` file you just downloaded. (Note: foobar 2.x will automatically select the correct version based on the software's bitness).
+3. Alternatively, you can manually copy the corresponding DLL file into the installation directory listed in the table above, then **restart** foobar2000.
 
-Typical 64-bit Windows path:
+*Manual Installation Path Example (Windows 64-bit)*:
 
 ```text
 C:\Users\<username>\AppData\Roaming\foobar2000-v2\user-components-x64\foo_zero_bus\foo_zero_bus.dll
 ```
 
-After installation, the service starts with foobar2000 and listens on `ws://127.0.0.1:17890` by default. Change the port under **File → Preferences → Tools → Zero Bus**.
+After installation, the service will start automatically with foobar2000 and listen on `ws://127.0.0.1:17890` by default. If you need to modify the port, please go to **File → Preferences → Tools → Zero Bus** to configure it.
 
-## Third-Party Integration
+## 🛠️ Third-Party Developer Integration
 
-| Caller | Recommended Path | Notes |
+| Your Role / Caller | Recommended Integration | Integration Note |
 | --- | --- | --- |
-| **Other foobar2000 components** | `zero_message_bus_v1` ABI | Copy the headers in [`sdk/foo_zero_bus/abi/`](sdk/foo_zero_bus/abi/) |
-| **Same-process tools or tests** | C++ SDK | Do not link this into a regular foobar component |
-| **Browser / Electron / scripts** | WebSocket envelope | Connect to `ws://127.0.0.1:<port>` |
+| **Other foobar2000 Components** | `zero_message_bus_v1` ABI | Only need to copy the header files in the [`sdk/foo_zero_bus/abi/`](sdk/foo_zero_bus/abi/) directory |
+| **In-Process Tools or Tests** | C++ SDK | Strictly prohibited to link this into other standard foobar components |
+| **Browser / Electron / Scripts** | WebSocket Envelope Protocol | Connects by default to `ws://127.0.0.1:<port>` |
 
-Full integration notes: [English SDK](docs/sdk.md) · [中文 SDK](docs/sdk_zh.md). Samples: [`examples/`](examples/).
+For complete integration instructions, please refer to the [English SDK](docs/sdk.md) · [中文 SDK](docs/sdk_zh.md). ABI header files are located in the [`sdk/foo_zero_bus/abi/`](sdk/foo_zero_bus/abi/) directory, and sample code can be found in the [`examples/`](examples/) directory.
 
-Callers must follow these rules:
+**⛔ Integrators must strictly adhere to the following rules:**
 
-1. `payload` must be a string. Run `JSON.stringify` on business objects first.
-2. Service callbacks must return quickly. Blocking longer than 50 ms is a violation.
-3. Reply to each `REQUEST` exactly once.
-4. Timeout does not kill business threads. Check `cancelled()` inside the handler.
-5. Do not create detached threads with `detach()`.
-6. Do not statically link `foo_zero_bus_core` into another foobar component.
+1. The `payload` field must be a pure string; if passing business objects, you must execute `JSON.stringify` first.
+2. Service callback functions must return as quickly as possible; blocking for more than 50ms will be recorded by the system as a violation.
+3. For each `REQUEST`, only one response is permitted.
+4. The Timeout mechanism will not forcefully kill business threads; business logic must respond to cancellation signals internally by checking `cancelled()` within the handler.
+5. Creating detached threads using `detach()` is absolutely prohibited.
+6. Statically linking the `foo_zero_bus_core` core library into other foobar components is strictly forbidden.
 
-## Preferences
+## ⚙️ Preferences Panel
 
-Path: **File → Preferences → Tools → Zero Bus**
+Panel Path: **File → Preferences → Tools → Zero Bus**
 
-- **General**: customize the WebSocket port (listens on `127.0.0.1` only).
-- **Service control**: start or stop the bus.
-- **Status**: view the number of active connections.
-- **Log** child page: optional communication logging, a read-only console, and one-click clear.
+- **General Settings**: Supports customizing the WebSocket port (for security reasons, listens only on `127.0.0.1`).
+- **Service Control**: Supports manually starting or stopping the bus service.
+- **Status Monitoring**: View the number of active connections in real-time.
+- **Log Subpage**: Provides optional communication logging, a read-only console output view, and a one-click log clearing feature.

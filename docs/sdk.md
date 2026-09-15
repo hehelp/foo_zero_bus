@@ -2,33 +2,37 @@
 
 **English** · [中文](sdk_zh.md)
 
-> **Version**: Zero Bus `0.1.0` / ABI v1
+> **Applicable Version**: Zero Bus `0.1.0` / ABI v1
 
-Zero Bus is an in-process asynchronous message bus that runs inside foobar2000. Native foobar2000 components connect through the ABI. Browsers, Electron, and local scripts connect through WebSocket. Both paths share the same `REQUEST / RESPONSE / EVENT` message model.
+Zero Bus is an in-process asynchronous message bus running within foobar2000. Native foobar2000 components connect via ABI, while browsers, Electron, and native scripts connect via WebSocket. Both connection methods share the exact same `REQUEST / RESPONSE / EVENT` message model.
 
-**Design rule**: the bus routes envelopes only and **never parses the business payload**. Payload is always a string. If you need to send JSON, serialize it first, then put the resulting string into the payload.
+**Core Design Principle**: The bus is solely responsible for routing envelopes and will **never parse the business Payload**. Whether using ABI or WebSocket, the Payload must always be a string; if JSON data needs to be transmitted, the business side must serialize it into a JSON string before placing it into the Payload.
 
 ---
 
 ## 1. Before You Start
 
-- Install and enable the `foo_zero_bus` component.
-- Open **Preferences → Tools → Zero Bus** and confirm the service is running.
-- The default WebSocket address is `ws://127.0.0.1:17890`. Change the port on the preferences page, or override it with `FOO_ZERO_BUS_WS_PORT`.
+Before developing and debugging, please ensure the following preparations are complete:
 
-> Zero Bus does not provide business services such as `plugin.localize`. Names in this document are examples. If the target service is not registered, the bus returns `SERVICE_NOT_FOUND`.
+- Install and enable the `foo_zero_bus` component.
+- Navigate to **Preferences → Tools → Zero Bus** in foobar2000 and confirm the service is running.
+- Verify that the default WebSocket listening address is `ws://127.0.0.1:17890`. You can change the port in the preferences page or override it using the `FOO_ZERO_BUS_WS_PORT` environment variable.
+
+> **⚠️ Note**: Zero Bus itself does not provide specific business services such as `plugin.localize`; service names in this documentation are for demonstration purposes only. Before making a call, you must ensure another component has registered the corresponding service, otherwise a `SERVICE_NOT_FOUND` error will be returned.
 
 ---
 
 ## 2. Choosing the Integration Method
 
-| Caller | Recommended Path | Required Files |
-| --- | --- | --- |
-| **foobar2000 component** | `zero_message_bus_v1` ABI | [`sdk/foo_zero_bus/abi/`](../sdk/foo_zero_bus/abi/) |
-| **Browser / Electron / local script** | WebSocket | No binary dependency |
-| **Internal tools or tests** | C++ SDK | `foo_zero_bus_api.h` + `foo_zero_bus_core` |
+Please select the appropriate integration method based on your development scenario:
 
-> Regular foobar2000 components must use the ABI. **Do not** statically link `foo_zero_bus_core` into your component. The C++ SDK is only for source-tree tools, tests, or a full source integration. It is not a cross-DLL interface.
+| Your Role / Caller | Recommended Integration | Required Dependencies |
+| --- | --- | --- |
+| **foobar2000 Component** | `zero_message_bus_v1` ABI | [`sdk/foo_zero_bus/abi/`](../sdk/foo_zero_bus/abi/) |
+| **Browser / Electron / Native Script** | WebSocket | No binary dependencies |
+| **Internal Tools or Tests** | C++ SDK | `foo_zero_bus_api.h` + `foo_zero_bus_core` |
+
+> **⛔ Strict Boundary**: Standard foobar2000 components must connect using the ABI; **never** statically link `foo_zero_bus_core` into your component. The C++ SDK is strictly for internal source code integration, internal tools, or testing, and is not a cross-DLL interface.
 
 ---
 
@@ -38,70 +42,70 @@ Zero Bus is an in-process asynchronous message bus that runs inside foobar2000. 
 
 | Value | Constant | Purpose |
 | --- | --- | --- |
-| 1 | `REQUEST` / `ZERO_MSG_REQUEST` | Start a request that expects a response |
-| 2 | `RESPONSE` / `ZERO_MSG_RESPONSE` | Successful reply |
-| 3 | `EVENT` / `ZERO_MSG_EVENT` | Broadcast to a registered service (no reply) |
-| 4 | `NOTIFICATION` / `ZERO_MSG_NOTIFICATION` | One-way message to a specific endpoint (no reply) |
-| 5 | `ERROR` / `ZERO_MSG_ERROR` | Failed reply |
-| 6 | `CANCEL` / `ZERO_MSG_CANCEL` | Cooperative cancel signal |
+| 1 | `REQUEST` / `ZERO_MSG_REQUEST` | Initiates a request (requires a response from the receiver) |
+| 2 | `RESPONSE` / `ZERO_MSG_RESPONSE` | Request processed successfully, returning a response |
+| 3 | `EVENT` / `ZERO_MSG_EVENT` | Publishes a broadcast event to registered services (no response required) |
+| 4 | `NOTIFICATION` / `ZERO_MSG_NOTIFICATION` | Sends a one-way notification to a specific endpoint (no response required) |
+| 5 | `ERROR` / `ZERO_MSG_ERROR` | Request processing failed, returning an error |
+| 6 | `CANCEL` / `ZERO_MSG_CANCEL` | Initiates a cooperative request cancellation signal |
 
-- Default `REQUEST` timeout is 5000 ms.
-- `correlation_id` on `RESPONSE`, `ERROR`, and `CANCEL` must match the original `REQUEST` `msg_id`.
+- The default timeout for a `REQUEST` is 5000ms.
+- The `correlation_id` in `RESPONSE`, `ERROR`, and `CANCEL` messages must strictly match the `msg_id` of the original `REQUEST` message.
 
 ### 3.2 Envelope Fields
 
-| Field | Meaning |
+| Field | Meaning and Rules |
 | --- | --- |
-| `sender` | Sender id. **Required for ABI**. Optional for WebSocket; the gateway overwrites it. |
-| `receiver` | Target service name or endpoint. **Required**. |
-| `type` | Message type from section 3.1. |
-| `msg_id` | Unique message id. WebSocket clients may generate it; the gateway fills it in if omitted. |
-| `correlation_id` | Used only by `RESPONSE`, `ERROR`, and `CANCEL` to point back to the request. |
-| `payload` | Opaque string. Empty string is allowed. |
+| `sender` | Sender identifier. **Required for ABI calls**; can be omitted in WebSocket calls, automatically overwritten by the gateway. |
+| `receiver` | Receiver service name or specific endpoint, **Required**. |
+| `type` | Message type (refer to the table in 3.1). |
+| `msg_id` | Unique message ID. WebSocket clients can generate this themselves; if omitted, the gateway generates it automatically. |
+| `correlation_id` | Used only in `RESPONSE`, `ERROR`, and `CANCEL` to point back to the original request ID. |
+| `payload` | Opaque string (business data), allowed to be an empty string. |
 
-Service names should use lowercase dotted form, for example `plugin.localize` or `plugin.lyrics.search`. The bus does not interpret the name.
+*Service Naming Convention*: Dot-separated lowercase format is recommended (e.g., `plugin.localize`, `plugin.lyrics.search`). Service names fall under the business protocol between communicating parties; Zero Bus does not interpret their specific meanings.
 
-### 3.3 Error Codes
+### 3.3 Error Codes Reference
 
-These values match ABI `zero_error_code` and the C++ SDK `foo_zero_bus::error_code`:
+The following values are consistent with the ABI's `zero_error_code` and the C++ SDK's `foo_zero_bus::error_code`:
 
-| Code | Name | Meaning |
+| Code | Enumeration Name | Error Meaning |
 | --- | --- | --- |
 | 0 | `OK` | Success |
 | 1 | `SERVICE_NOT_FOUND` | Target service is not registered |
-| 2 | `SERVICE_UNHEALTHY` | Service is currently unhealthy |
-| 3 | `SERVICE_QUARANTINED` | Service was quarantined after repeated violations |
+| 2 | `SERVICE_UNHEALTHY` | Service state is currently unhealthy |
+| 3 | `SERVICE_QUARANTINED` | Service has been quarantined by the bus due to consecutive violations |
 | 4 | `TIMEOUT` | Request timed out |
-| 5 | `CANCELLED` | Request was cancelled |
-| 6 | `QUEUE_FULL` | Queue is full; backpressure applied |
-| 7 | `INVALID_ENVELOPE` | Envelope is invalid |
+| 5 | `CANCELLED` | Request has been cancelled |
+| 6 | `QUEUE_FULL` | Message queue is full, triggering backpressure |
+| 7 | `INVALID_ENVELOPE` | Message envelope format is invalid |
 | 8 | `INVALID_MESSAGE_TYPE` | Message type is invalid |
-| 9 | `DUPLICATE_RESPONSE` | More than one reply was attempted |
-| 10 | `TRANSPORT_ERROR` | Transport failed |
+| 9 | `DUPLICATE_RESPONSE` | Attempted to respond multiple times to the same request |
+| 10 | `TRANSPORT_ERROR` | Underlying transport failed |
 | 11 | `AUTH_FAILED` | WebSocket authentication failed |
-| 12 | `ACCESS_DENIED` | Not allowed to access the target service |
-| 13 | `INTERNAL_ERROR` | Internal bus error |
+| 12 | `ACCESS_DENIED` | Unauthorized to access the target service |
+| 13 | `INTERNAL_ERROR` | Internal error occurred within the bus |
 
-WebSocket `ERROR` payloads are also JSON strings, for example `{"code":"TIMEOUT","message":"request timeout"}`.
+> *WebSocket Error Response Example*: The Payload for an ERROR is also a JSON string, e.g., `{"code":"TIMEOUT","message":"request timeout"}`.
 
 ---
 
-## 4. foobar2000 Component ABI
+## 4. foobar2000 Component ABI Integration Guide
 
-### 4.1 Headers
+### 4.1 Including Headers
 
-Copy the entire [`sdk/foo_zero_bus/abi/`](../sdk/foo_zero_bus/abi/) directory into your project and add its parent directory to the include path. Include the foobar2000 SDK first, then the Zero Bus ABI:
+Please copy the entire [`sdk/foo_zero_bus/abi/`](../sdk/foo_zero_bus/abi/) directory into your project and add its parent directory to your header search paths. When including, **you must include the foobar2000 SDK first, followed by the Zero Bus ABI**:
 
 ```cpp
 #include <foobar2000.h>
 #include "foo_zero_bus/abi/foo_zero_bus_abi.h"
 ```
 
-These headers are the integration boundary. Do not include internal headers.
+*(The above headers represent a strict integration boundary; do not include any internal headers)*.
 
-### 4.2 Declare the Service GUID
+### 4.2 Declaring the Service GUID
 
-Define the GUID in **exactly one** `.cpp` file in your component:
+You must declare this GUID within your component project, **and exactly in one** `.cpp` **file only**:
 
 ```cpp
 #include <foobar2000.h>
@@ -110,9 +114,9 @@ Define the GUID in **exactly one** `.cpp` file in your component:
 ZERO_MESSAGE_BUS_DECLARE_GUID;
 ```
 
-ABI v1 GUID: `{7A3E9C1D-4B62-4F8A-9C11-2E58A40DB721}`. Defining it twice or omitting it will fail at compile or link time.
+*(Note: ABI v1 GUID is `{7A3E9C1D-4B62-4F8A-9C11-2E58A40DB721}`. Duplicate definitions or omissions will cause compilation/linking failures)*.
 
-### 4.3 Locate the Bus
+### 4.3 Retrieving the Bus Instance
 
 ```cpp
 service_ptr_t<zero_message_bus_v1> bus;
@@ -122,12 +126,12 @@ if (!zero_message_bus_v1::enumerate().first(bus) || !bus->running()) {
 }
 ```
 
-Failure usually means the component is not installed, is disabled, or is still starting.
+Failure to retrieve usually means the component is not installed, disabled, or still booting.
 
-### 4.4 Send Messages and Requests
+### 4.4 Sending Messages and Requests
 
-- Broadcast or notify with `send_message()` (`EVENT` or `NOTIFICATION`).
-- Start a request that needs a reply with `send_request_async()`.
+- **Broadcast/Notification**: Use `send_message()` to handle `EVENT` or `NOTIFICATION`.
+- **Initiate Request**: Use `send_request_async()` to initiate a `REQUEST` that requires a response.
 
 ```cpp
 zero_message msg{};
@@ -141,14 +145,14 @@ msg.payload = R"({"text":"Hello","to":"zh-CN"})";
 const int accepted = bus->send_request_async(&msg, &receiver, ZERO_DEFAULT_REQUEST_TIMEOUT_MS);
 ```
 
-Lifetime rules:
+**Memory Lifecycle Management**:
 
-- The `zero_message` and its string pointers only need to stay alive until the method returns. The bus deep-copies what it needs.
-- A `zero_message` received in a reply callback is valid only for that callback. Deep-copy it before using it on another thread.
+- The passed `zero_message` struct and string pointers only need to stay alive until the method returns; the bus will automatically deep-copy the necessary fields internally.
+- The `zero_message` received in the response callback (Receiver) is only valid during that single callback. If needed in a background thread, **the business side must perform a deep copy itself**.
 
-### 4.5 Register a Service
+### 4.5 Service Registration and Lifecycle Rules
 
-Register with `register_service()`. Call `unregister_service()` before the component unloads.
+Use `register_service()` to register a service, and you must call `unregister_service()` before the component unloads or exits.
 
 ```cpp
 zero_service_provider_v1 provider{};
@@ -157,30 +161,28 @@ provider.release = &release_context;
 provider.ctx = context;
 
 if (!bus->register_service("plugin.localize", &provider)) {
-    // Usually the service name is already taken.
+    // Registration failed: usually because the service name is occupied by another plugin
 }
 ```
 
-Rules:
+**⚠️ Developer Pitfall Guide (Crucial)**:
 
-1. `on_message` must return immediately. Over 10 ms produces a warning. Over 50 ms is a violation and may quarantine the service.
-2. For async work, copy `zero_reply_v1` and call `retain(ctx)`. Call `release(ctx)` when the work finishes.
-3. A `REQUEST` may call `reply()` or `error()` only once.
-4. Do not use `std::thread::detach()`. Use a thread pool or executor with a defined lifetime.
-5. Do not let C++ exceptions cross the ABI boundary.
+1. **Fast Return Principle**: `on_message` must return instantly! Executions exceeding 10ms will output a warning, and those exceeding 50ms will be judged as violations, potentially causing the service to be quarantined.
+2. **Asynchronous Response**: If data processing needs to be async, first copy `zero_reply_v1` and call `retain(ctx)`; after the task finishes, you must call the corresponding `release(ctx)`.
+3. **Single Response**: A single `REQUEST` can only invoke `reply()` or `error()` once; duplicate calls will be intercepted by the bus.
+4. **No Rogue Threads**: Using `std::thread::detach()` is absolutely forbidden! You must use a thread pool or Executor with explicit lifecycle management.
+5. **Exception Isolation**: Strictly prohibit C++ exceptions from crossing the ABI boundary.
 
----
+## 5. WebSocket Integration Guide
 
-## 5. WebSocket
+### 5.1 Connection and Authentication
 
-### 5.1 Connect and Authenticate
+- **Address**: `ws://127.0.0.1:17890` (listens only to the local loopback address, rejects external connections).
+- **Authentication**: If the administrator has enabled `require_auth`, the first frame sent after establishing the connection must be `{"auth":"<token>"}`.
 
-- Address: `ws://127.0.0.1:17890` (loopback only).
-- If `require_auth` is enabled, the first frame after connect must be `{"auth":"<token>"}`.
+### 5.2 Sending Requests (REQUEST)
 
-### 5.2 Send a REQUEST
-
-Generate the envelope with a JSON library. Do not hand-write escapes. Payload must be a string, so business objects need **two** serializations:
+**You must use a JSON library to generate the envelope; do not manually write escapes.** Because the Payload must be a pure string, if your business data is an object, you must perform **double serialization** (first serialize the business object, then serialize the entire envelope):
 
 ```javascript
 const request = {
@@ -189,53 +191,46 @@ const request = {
   type: 1,
   msg_id: "req_001",
   correlation_id: "",
+  // You must execute the first JSON.stringify here
   payload: JSON.stringify({ text: "Hello", to: "zh-CN" }),
 };
 
+// Execute the second JSON.stringify to send the outer envelope
 socket.send(JSON.stringify(request));
 ```
 
-Do not assign an object to `payload`. That produces `INVALID_ENVELOPE`.
+> ❌ **Common Error Example**: Assigning an object directly to the payload field will cause an `INVALID_ENVELOPE` error. `payload: { text: "Hello", to: "zh-CN" } // ERROR!`
 
-The WebSocket endpoint currently uses a fixed 5000 ms timeout and does not accept a custom timeout in the envelope. Default payload limit is 1 MB.
+*Note: The WebSocket endpoint currently uses a fixed 5000ms default timeout and does not support custom timeout configurations within the envelope; Payload size is limited to 1MB by default*.
 
-### 5.3 Receive Replies and Cancel
+### 5.3 Receiving Responses and Canceling Requests
 
-- `type === 2` is success. `type === 5` is failure. Match `correlation_id` to the original `msg_id`.
-- To cancel, send `type === 6` and put the original `msg_id` in `correlation_id`:
-
-```json
-{"receiver":"plugin.localize","type":6,"correlation_id":"req_001","payload":""}
-```
-
----
+- **Processing Responses**: Listen to the return frame; `type === 2` indicates success, `type === 5` indicates failure. Match the callback by comparing the `correlation_id` with the original request's `msg_id`.
+- **Canceling Requests**: Send a message with `type === 6` (CANCEL) and fill the original request's `msg_id` into the `correlation_id`: `{"receiver":"plugin.localize","type":6,"correlation_id":"req_001","payload":""}`.
 
 ## 6. In-Process C++ SDK (Internal Tools Only)
 
-This interface is for Zero Bus source-tree tools, tests, and full source integration. It is **not** for standalone foobar2000 components.
+> **Declaration**: This interface is applicable only to Zero Bus source code internal tools, testing modules, and overall source code integration; **it is not applicable to independent foobar2000 component development**.
 
-```cpp
-#include "foo_zero_bus/foo_zero_bus_api.h"
-namespace msgbus = foo_zero_bus;
-```
+Include namespace: `#include "foo_zero_bus/foo_zero_bus_api.h"` -> `namespace msgbus = foo_zero_bus;`
 
-| API | Purpose |
-| --- | --- |
-| `bus::request_async(service, payload, handler, timeout_ms)` | Callback-style async request; returns `request_handle` |
-| `bus::request_future(service, payload, timeout_ms)` | Returns `std::future<response>` |
-| `bus::request_sync(service, payload, timeout_ms)` | Blocks the worker thread; throws `request_error` on failure |
-| `bus::request_awaitable(executor, service, payload, timeout_ms)` | C++20 `co_await`; resumes on the given executor |
-| `bus::request(...)` | Compatibility alias for the original callback API |
-| `bus::publish(service, payload)` | Publish an EVENT |
-| `bus::notify(endpoint, payload)` | Send a NOTIFICATION |
-| `bus::cancel_request(id)` | Cooperative cancel |
-| `service(bus, name, executor, handler)` | Register a service; unregisters on destruction |
-| `responder::reply()` / `error()` | Complete a request; succeeds only once |
-| `executor::post()` | Post work to a managed worker thread |
+Core API Overview:
 
-Service handlers run on the supplied executor. After timeout or cancel, the bus does not kill business work. Check `request::cancelled()` and exit yourself.
+- `bus::request_async(service, payload, handler, timeout_ms)`: Callback-style async request; returns a `request_handle`.
+- `bus::request_future(service, payload, timeout_ms)`: Returns `std::future<response>`.
+- `bus::request_sync(service, payload, timeout_ms)`: Blocks the current worker thread; throws `request_error` on failure.
+- `bus::request_awaitable(executor, service, payload, timeout_ms)`: C++20 `co_await`; resumes on the given executor.
+- `bus::request(service, payload, timeout_ms, handler)`: Initiates an async request and returns a handle (compatibility alias for the original callback API).
+- `bus::publish(service, payload)`: Publishes an EVENT.
+- `bus::notify(endpoint, payload)`: Sends a NOTIFICATION.
+- `bus::cancel_request(id)`: Cooperative cancellation.
+- `service(bus, name, executor, handler)`: Registers a service (utilizes RAII, automatically unregisters safely upon destruction).
+- `responder::reply()` / `error()`: Executes a request response (can only be called successfully once).
+- `executor::post()`: Safely pushes a task to be executed in a managed worker thread.
 
-`request_sync()` may run only on a dedicated background thread. Do not block the foobar2000 UI thread, the bus Dispatcher, or the single-thread executor that the target service needs to finish the request. `request_awaitable()` requires an explicit resume executor so continuation code does not run on the Dispatcher.
+The service handler runs on the specified executor. After timeout or cancellation, the bus will not forcibly stop the business task; check `request::cancelled()` and exit yourself.
+
+`request_sync()` may only be called on an independent background thread. Do not block the foobar2000 UI, the Dispatcher, or the single-thread executor that the target service needs to finish this request. `request_awaitable()` must be given an explicit resume executor so later coroutine code does not run on the Dispatcher.
 
 ```cpp
 auto handle = bus.request_async(
@@ -262,27 +257,23 @@ std::string result = co_await bus.request_awaitable(
     5000);
 ```
 
-See [`example_sdk.cpp`](../examples/cpp/inproc/example_sdk.cpp).
+See [`example_sdk.cpp`](../examples/cpp/inproc/example_sdk.cpp) for a complete example.
 
----
+## 7. Troubleshooting (FAQ)
 
-## 7. FAQ
+- **Cannot connect via WebSocket?** Please confirm foobar2000 is running. Go to **Preferences → Tools → Zero Bus** to check if the service has started and verify the port configuration. Note that the `FOO_ZERO_BUS_WS_PORT` environment variable might override the UI panel's port setting.
+- **Frequently receiving** `SERVICE_NOT_FOUND`**?** The target service is not registered, or the component providing the service has not finished loading during boot.
+- **Frequently receiving** `INVALID_ENVELOPE`**?** Please strictly check your WebSocket send frames. You must use `JSON.stringify()` to generate the outer envelope, ensure `receiver` is non-empty, and ensure the `payload` is a pure string, not a JSON Object.
+- **Requests always triggering** `TIMEOUT`**?** The receiving service must invoke `reply()` or `error()` once for every `REQUEST`. Note that a bus timeout merely means the queueing/waiting state within the bus has ended; it **will not** actively kill business threads still running in the background.
+- **Service state changed to** `UNHEALTHY` **or** `QUARANTINED`**?** This indicates your service callback blocked the bus's dispatcher thread. Please immediately move all time-consuming tasks like network requests and file IO to your managed `executor` thread pool to ensure the bus's entry callback returns instantaneously.
 
-- **WebSocket will not connect?** Confirm foobar2000 is running. Check **Preferences → Tools → Zero Bus** for service state and port. `FOO_ZERO_BUS_WS_PORT` can override the UI port.
-- **Frequent `SERVICE_NOT_FOUND`?** The target service is not registered, or the providing component has not finished loading.
-- **Frequent `INVALID_ENVELOPE`?** Build the outer envelope with `JSON.stringify()`. `receiver` must be non-empty. `payload` must be a string, not a JSON object.
-- **Requests always time out?** The service must call `reply()` or `error()` once for every `REQUEST`. Timeout only ends the wait inside the bus. It does not kill background work.
-- **Service became `UNHEALTHY` or `QUARANTINED`?** The callback blocked the Dispatcher. Move network I/O and file I/O to a managed executor so the entry callback returns immediately.
+## 8. Official Example Index
 
----
-
-## 8. Examples
-
-| File | What it shows |
+| Example File Path | Demonstration Content |
 | --- | --- |
-| [`zero_bus_guid.cpp`](../examples/cpp/foobar_plugin/zero_bus_guid.cpp) | GUID definition (compile in one file per component) |
-| [`example_service.cpp`](../examples/cpp/foobar_plugin/example_service.cpp) | Register and implement `plugin.localize` |
-| [`example_client.cpp`](../examples/cpp/foobar_plugin/example_client.cpp) | ABI `REQUEST` client |
-| [`example_sdk.cpp`](../examples/cpp/inproc/example_sdk.cpp) | In-process C++ SDK, including request helpers |
-| [`example.html`](../examples/websocket/example.html) | Browser WebSocket debug page |
-| [`example.mjs`](../examples/websocket/example.mjs) | Node.js / Electron client |
+| [`zero_bus_guid.cpp`](../examples/cpp/foobar_plugin/zero_bus_guid.cpp) | GUID definition example (needs to be compiled only once per component) |
+| [`example_service.cpp`](../examples/cpp/foobar_plugin/example_service.cpp) | Registering and implementing the `plugin.localize` server |
+| [`example_client.cpp`](../examples/cpp/foobar_plugin/example_client.cpp) | Initiating an ABI `REQUEST` client |
+| [`example_sdk.cpp`](../examples/cpp/inproc/example_sdk.cpp) | Usage methods for the in-process C++ SDK, including request helpers |
+| [`example.html`](../examples/websocket/example.html) | Browser-based WebSocket debugging page |
+| [`example.mjs`](../examples/websocket/example.mjs) | Calling client in Node.js / Electron environments |
