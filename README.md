@@ -4,13 +4,19 @@
 
 Zero Bus is an in-process asynchronous message bus designed specifically for foobar2000. It provides a unified Request / Response / Event communication model for native C++ components and WebSocket clients. The core design philosophy of the bus is to solely route the "Envelope," absolutely refusing to parse the Payload at the business level.
 
-The current version is production-ready `0.1.1`. It fully supports foobar2000 1.x / 2.x in Windows environments (covering 32-bit, 64-bit, and ARM64EC), as well as macOS 11+ systems.
+The current version is production-ready `0.1.2`. It fully supports foobar2000 1.x / 2.x in Windows environments (covering 32-bit, 64-bit, and ARM64EC), as well as macOS 11+ systems.
 
 This repository is primarily used for hosting compiled installation packages, provided ABI header files, and relevant sample code. You can obtain the installation packages directly from the repository's **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page.
 
 ---
 
 ## 🚀 Changelog
+
+### v0.1.2 (2026-09-27)
+
+- macOS now has a preferences page: **Tools → Zero Bus** (port, start/stop, UI language, active connections) plus a “Log” sub-page, matching Windows.
+- On macOS, “Follow system” now uses the system preferred language, so Simplified Chinese systems default to Chinese.
+- The Windows DLL now carries version info (company klyrics.cn and copyright).
 
 ### v0.1.1 (2026-09-15)
 
@@ -52,7 +58,7 @@ This repository is primarily used for hosting compiled installation packages, pr
 
 ## 📦 Installation Guide
 
-1. Head to the **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page of this repository and download the latest `foo_zero_bus-0.1.1.fb2k-component` installation package.
+1. Head to the **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** page of this repository and download the latest `foo_zero_bus-0.1.2.fb2k-component` installation package.
 2. Open foobar2000, navigate to **File → Preferences → Components → Install**, and select the `.fb2k-component` file you just downloaded. (Note: foobar 2.x will automatically select the correct version based on the software's bitness).
 3. Alternatively, you can manually copy the corresponding DLL file into the installation directory listed in the table above, then **restart** foobar2000.
 

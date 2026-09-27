@@ -2,7 +2,7 @@
 
 [English](sdk.md) · **中文**
 
-> **适用版本**：Zero Bus `0.1.1` / ABI v1
+> **适用版本**：Zero Bus `0.1.2` / ABI v1
 
 Zero Bus 是一款运行在 foobar2000 进程内的异步消息总线。foobar2000 本地组件通过 ABI 接入，而浏览器、Electron 及本机脚本则通过 WebSocket 接入。这两种接入方式共用同一套 `REQUEST / RESPONSE / EVENT` 消息模型。
 

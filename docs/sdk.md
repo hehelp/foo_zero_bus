@@ -2,7 +2,7 @@
 
 **English** · [中文](sdk_zh.md)
 
-> **Applicable Version**: Zero Bus `0.1.1` / ABI v1
+> **Applicable Version**: Zero Bus `0.1.2` / ABI v1
 
 Zero Bus is an in-process asynchronous message bus running within foobar2000. Native foobar2000 components connect via ABI, while browsers, Electron, and native scripts connect via WebSocket. Both connection methods share the exact same `REQUEST / RESPONSE / EVENT` message model.
 

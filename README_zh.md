@@ -4,13 +4,19 @@
 
 Zero Bus 是一款专为 foobar2000 设计的进程内异步消息总线。它为本机 C++ 组件和 WebSocket 客户端提供了一套统一的 Request / Response / Event 通信模型。总线的核心设计理念是只负责路由“信封 (Envelope)”，绝对不解析业务层面的 Payload。
 
-当前版本为产品级 `0.1.1`。全面支持 Windows 环境下的 foobar2000 1.x / 2.x（涵盖 32 位、64 位与 ARM64EC），以及 macOS 11+ 系统。
+当前版本为产品级 `0.1.2`。全面支持 Windows 环境下的 foobar2000 1.x / 2.x（涵盖 32 位、64 位与 ARM64EC），以及 macOS 11+ 系统。
 
 本仓库主要用于托管编译好的安装包、对外提供的 ABI 头文件以及相关示例代码。您可以直接在仓库的 **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** 页面获取安装包。
 
 ---
 
 ## 🚀 更新日志
+
+### v0.1.2 (2026-09-27)
+
+- macOS 新增偏好页：**工具 → Zero Bus**（端口、启停服务、界面语言、当前连接）及其「日志」子页，功能与 Windows 一致。
+- macOS 的「跟随系统」改为按系统首选语言判断，简体中文系统默认显示中文。
+- Windows DLL 补充版本信息（公司 klyrics.cn、版权声明）。
 
 ### v0.1.1 (2026-09-15)
 
@@ -62,7 +68,7 @@ Zero Bus 是一款专为 foobar2000 设计的进程内异步消息总线。它�
 
 ## 📦 安装指南
 
-1. 前往本仓库的 **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** 页面，下载最新的 `foo_zero_bus-0.1.1.fb2k-component` 安装包。
+1. 前往本仓库的 **[Releases](https://github.com/hehelp/foo_zero_bus/releases)** 页面，下载最新的 `foo_zero_bus-0.1.2.fb2k-component` 安装包。
 2. 打开 foobar2000，依次点击 **文件 → 首选项 → 组件 → 安装**，选择刚刚下载的 `.fb2k-component` 文件。（注：foobar 2.x 会根据软件位数自动选择正确版本）。
 3. 或者，您也可以将对应的 DLL 文件手动拷贝至上表列出的安装目录，然后**重启** foobar2000。
 
